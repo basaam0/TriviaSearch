@@ -1,0 +1,36 @@
+<html>
+<head>
+<script>
+  document.getElementById("search").onclick = function() {
+    var request = new XMLHttpRequest()
+
+    // Open a new connection, using the GET request on the URL endpoint
+    request.open('GET', 'http://jservice.io/api/clues', true)
+
+    request.onload = function() {
+      // Begin accessing JSON data here
+      var data = JSON.parse(this.response)
+
+      data.forEach(clue => {
+        // Log each movie's title
+        console.log(clue)
+      })
+      
+    }
+
+    // Send request
+    request.send()
+  }
+</script>
+
+</head>
+
+<body>
+<div class="topnav">
+  
+  <input type="text" placeholder="Search..">
+  <button type="button" id="search">Enter</button>
+</div>
+
+</body>
+</html\>
