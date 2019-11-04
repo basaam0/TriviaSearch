@@ -115,7 +115,7 @@
         }
 
         // Open a new connection, using the GET request on the URL endpoint with parameters
-        request.open('GET', 'http://jservice.io/api/clues' + formatParams(params), true);
+        request.open('GET', 'https://cors-anywhere.herokuapp.com/http://jservice.io/api/clues' + formatParams(params), true);
 
         request.onload = function() {
             // Accesses the JSON response data
