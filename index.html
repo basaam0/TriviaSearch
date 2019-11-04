@@ -1,36 +1,255 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<script>
-  document.getElementById("search").onclick = function() {
-    var request = new XMLHttpRequest()
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <style>
+        table, tr, th, td {
+            border: solid 1px black;=
+        }
 
-    // Open a new connection, using the GET request on the URL endpoint
-    request.open('GET', 'http://jservice.io/api/clues', true)
+        table {
+            width: 100%;
+        }
+    </style>
+    
+    <script>
+    var offset = 0;
+    var prevButtons = document.getElementsByClassName("prev");
+    var nextButtons = document.getElementsByClassName("next");
+        
+    function search() {
+        function formatParams(params){
+            params["offset"] = offset;
 
-    request.onload = function() {
-      // Begin accessing JSON data here
-      var data = JSON.parse(this.response)
+            return "?" + Object.keys(params).map(key => {
+                return key+"="+encodeURIComponent(params[key]);
+            }).join("&");
+        }
 
-      data.forEach(clue => {
-        // Log each movie's title
-        console.log(clue)
-      })
-      
+        function match(clue) {
+            var query = document.getElementById("searchbar").value;
+            return clue.category.title.includes(query);
+        }
+        
+        
+        var table = document.getElementById("cluesTable");
+        table.innerHTML = "";
+
+        var tableHeaders = ["ID", "Category", "Question", "Difficulty", "Air Date"];
+        var tableHeader = table.createTHead();
+        var headerRow = tableHeader.insertRow();
+
+        tableHeaders.forEach(th => {
+            var cell = headerRow.insertCell();   
+            cell.innerHTML = th;
+        });
+
+        var request = new XMLHttpRequest();
+        var selection = document.getElementById("dropdown").value;
+        var params = {};
+
+        if (selection === "difficulty")
+            params['value'] = document.getElementById("searchbar").value;
+
+        else if (selection === "date") {
+            params['min_date'] = params['max_date'] = document.getElementById("startdate").value;
+        }
+
+        else if (selection === "timeframe") {
+            params['min_date'] = document.getElementById("startdate").value;
+            params['max_date'] = document.getElementById("enddate").value;
+        }
+
+        else if (selection === "difficulty")
+            params['value'] = document.getElementById("searchbar").value;
+
+        // Open a new connection, using the GET request on the URL endpoint
+        request.open('GET', 'http://jservice.io/api/clues' + formatParams(params), true);
+        console.log('http://jservice.io/api/clues' + formatParams(params));
+        console.log(request);
+
+        request.onload = function() {
+            // Begin accessing JSON data here
+            var data = JSON.parse(this.response);
+
+            var count = 0;
+            data.forEach(clue => {
+                if (selection != "category" || document.getElementById("searchbar").value == ""  || match(clue)) {
+                    count++;
+                    var tr = table.insertRow();
+                    var clueId = tr.insertCell();
+                    var categoryName = tr.insertCell();
+                    var question = tr.insertCell();
+                    var difficulty = tr.insertCell();
+                    var airdate = tr.insertCell();
+
+                    clueId.innerHTML = clue.id;
+                    categoryName.innerHTML = clue.category.title;
+                    difficulty.innerHTML = clue.value;
+                    airdate.innerHTML = new Date(clue.airdate).toDateString();
+
+                    var clueQuestion = document.createElement("p");
+                    clueQuestion.innerHTML = clue.question;
+
+                    var revealButton = document.createElement("button");
+                    revealButton.innerHTML = "Show Answer";
+                    revealButton.onclick =  (event) => {
+                        var button = event.srcElement;
+                        var answer = button.nextSibling;
+
+                        button.innerHTML = (button.innerHTML === "Show Answer") ? "Hide Answer" : "Show Answer";
+                        answer.style.display = (answer.style.display === "none") ? "block" : "none";
+                    }
+
+                    var answer = document.createElement("p");
+                    answer.style.display = "none";
+                    answer.innerHTML = clue.answer;
+
+                    question.appendChild(clueQuestion);
+                    question.appendChild(revealButton);
+                    question.appendChild(answer);
+
+                    // Log each movie's title
+                    //console.log(clue);
+                    console.log(offset)
+                }
+            });
+            
+            var emptyMessage = document.getElementById("empty");
+            
+            if (count == 0) {
+                emptyMessage.style.display = "block";
+                nextButtons[0].style.display = nextButtons[1].style.display = "none";
+                prevButtons[0].style.display = prevButtons[1].style.display = "none";
+            }
+            else
+                emptyMessage.style.display = "none";
+
+            if (count >= 100)
+                nextButtons[0].style.display = nextButtons[1].style.display = "block";
+        }
+        
+        // Send request
+        request.send();
     }
+        
+    function previousPage() {
+        offset -= 100;
+        search();
 
-    // Send request
-    request.send()
-  }
-</script>
+        if (offset <= 0) {
+            var prevButtons = document.getElementsByClassName("prev");
+            prevButtons[0].style.display = prevButtons[1].style.display = "none";
+        }
+    }
+        
+    function nextPage() {
+        offset += 100;
+        search();
+
+        var prevButtons = document.getElementsByClassName("prev");
+        prevButtons[0].style.display = prevButtons[1].style.display = "block";
+    }
+        
+    window.onload = function() {
+        offset = 0;
+        
+        document.getElementById("dropdown").onchange = function() {
+            var selection = document.getElementById("dropdown").value;
+            var startDate = document.getElementById("startdate");
+            var endDate = document.getElementById("enddate");
+            var searchBar = document.getElementById("searchbar");
+            var table = document.getElementById("cluesTable");
+            
+            if (selection === "category" || selection === "difficulty") {
+                searchBar.style.display = "block";
+                startDate.style.display = "none";
+                endDate.style.display = "none";
+            }
+            
+            else {
+                searchBar.style.display = "none";
+                
+                
+                if (selection === "date") {
+                    startDate.style.display = "block";
+                    endDate.style.display = "none";
+                }
+                
+                else if (selection === "timeframe") {
+                    startDate.style.display = "block";
+                    endDate.style.display = "block";
+                }
+                
+                else {
+                    startDate.style.display = "none";
+                    endDate.style.display = "none";
+                }
+            }
+            
+            prevButtons[0].style.display = prevButtons[1].style.display = "none";
+            nextButtons[0].style.display = nextButtons[1].style.display = "none";
+            offset = 0;
+            table.innerHTML = "";
+        }        
+        
+        
+        
+        document.getElementsByClassName("prev")[0].onclick = document.getElementsByClassName("prev")[1].onclick = previousPage;
+        document.getElementsByClassName("next")[0].onclick = document.getElementsByClassName("next")[1].onclick = nextPage;
+        
+        document.getElementById("search").onclick = () => {
+            offset = 0; 
+            search();
+        }
+        
+        document.getElementById("searchbar").onchange = document.getElementById("startdate").onchange = document.getElementById("enddate").onchange = () => {
+            prevButtons[0].style.display = prevButtons[1].style.display = "none";
+            nextButtons[0].style.display = nextButtons[1].style.display = "none";
+            offset = 0;
+            document.getElementById("cluesTable").innerHTML = "";
+        }
+    }
+    </script>
 
 </head>
 
 <body>
 <div class="topnav">
-  
-  <input type="text" placeholder="Search..">
-  <button type="button" id="search">Enter</button>
+    
+    <p>Search By: </p>
+    <select id="dropdown">
+        <option value="category">Category</option>
+        <option value="date">Date</option>
+        <option value="timeframe">Timeframe</option>
+        <option value="difficulty">Difficulty</option>
+    </select>
+    
+    <br/>
+    
+    <input id="searchbar" type="text" placeholder="Search..." width="70vw" />
+    <input id="startdate" type="date" style="display:none;" />
+    <input id="enddate" type="date" style="display:none;" />
+    
+    <button type="button" id="search">Enter</button>
+    
+    <br/>
+    
+    <button class="prev" type="button" style="display:none;">Previous Page</button>
+    <button class="next" type="button" style="display:none;">Next Page</button>
+    
+    <br/>
+    <table id="cluesTable"></table>
+    
+    <p id="empty" style="display:none;">No results found</p>
+    
+    <br/>
+    
+    <button class="prev" type="button" style="display:none;">Previous Page</button>
+    <button class="next" type="button" style="display:none;">Next Page</button>
 </div>
 
 </body>
-</html\>
+</html>
