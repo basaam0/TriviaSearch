@@ -4,13 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Great+Vibes&display=swap" rel="stylesheet">
+
+    <title>Jeopardy! Trivia Search</title>
+    
     <style>
+        * {
+            font-family: 'Source Sans Pro', sans-serif;            
+        }
+        
+        table {
+            color: white;
+        }
+        
+        body {
+            background-image: linear-gradient(blue, #7BD5FF); 
+            height: 100%;
+            background-attachment:fixed;
+        }
+        
         table, tr, th, td {
-            border: solid 1px black;=
+            border: solid 1px black;
         }
 
         table {
             width: 100%;
+        }
+        
+        th {
+          background-color: aqua;
+        }
+        
+        h1 {
+            text-align: center;
+            font-family: 'Great Vibes', cursive;
+            font-size: 5vw;
+            color: yellow;
+        }
+        
+        .next {
+            float: right;
+        }
+        
+        .prev {
+            float: left;
+        }
+        
+        #empty, p {
+            color: white;
         }
     </style>
     
@@ -18,9 +60,12 @@
     var offset = 0;
     var prevButtons = document.getElementsByClassName("prev");
     var nextButtons = document.getElementsByClassName("next");
-        
+    
+    // Generates a table of clues based on the search parameters
     function search() {
+        // URL-encodes a list of parameters
         function formatParams(params){
+            // Adds the offset field to get results for the current page
             params["offset"] = offset;
 
             return "?" + Object.keys(params).map(key => {
@@ -28,10 +73,12 @@
             }).join("&");
         }
 
+        // Checks if the category for a clue contains the search string
         function match(clue) {
             var query = document.getElementById("searchbar").value;
             return clue.category.title.includes(query);
         }
+        
         
         
         var table = document.getElementById("cluesTable");
@@ -41,18 +88,23 @@
         var tableHeader = table.createTHead();
         var headerRow = tableHeader.insertRow();
 
+        // Inserts the headers into the table
         tableHeaders.forEach(th => {
             var cell = headerRow.insertCell();   
             cell.innerHTML = th;
         });
 
+        
+        
         var request = new XMLHttpRequest();
         var selection = document.getElementById("dropdown").value;
         var params = {};
 
+        // Sets the search parameters to limit the API request based on the user selection
         if (selection === "difficulty")
             params['value'] = document.getElementById("searchbar").value;
 
+        // For a specific date, the min and max dates are equal
         else if (selection === "date") {
             params['min_date'] = params['max_date'] = document.getElementById("startdate").value;
         }
@@ -62,22 +114,23 @@
             params['max_date'] = document.getElementById("enddate").value;
         }
 
-        else if (selection === "difficulty")
-            params['value'] = document.getElementById("searchbar").value;
-
-        // Open a new connection, using the GET request on the URL endpoint
+        // Open a new connection, using the GET request on the URL endpoint with parameters
         request.open('GET', 'http://jservice.io/api/clues' + formatParams(params), true);
-        console.log('http://jservice.io/api/clues' + formatParams(params));
-        console.log(request);
 
         request.onload = function() {
-            // Begin accessing JSON data here
+            // Accesses the JSON response data
             var data = JSON.parse(this.response);
 
             var count = 0;
+            
+            // Traverses the list of clues in the response
             data.forEach(clue => {
+                
+                // If a search by category is selected, clues that do not contain the search string in their name are skipped
                 if (selection != "category" || document.getElementById("searchbar").value == ""  || match(clue)) {
                     count++;
+                    
+                    // Inserts the clue into the table
                     var tr = table.insertRow();
                     var clueId = tr.insertCell();
                     var categoryName = tr.insertCell();
@@ -93,6 +146,7 @@
                     var clueQuestion = document.createElement("p");
                     clueQuestion.innerHTML = clue.question;
 
+                    // Creates a show/hide button for the answer to the clue
                     var revealButton = document.createElement("button");
                     revealButton.innerHTML = "Show Answer";
                     revealButton.onclick =  (event) => {
@@ -103,6 +157,7 @@
                         answer.style.display = (answer.style.display === "none") ? "block" : "none";
                     }
 
+                    // Hides the answer initially
                     var answer = document.createElement("p");
                     answer.style.display = "none";
                     answer.innerHTML = clue.answer;
@@ -110,15 +165,12 @@
                     question.appendChild(clueQuestion);
                     question.appendChild(revealButton);
                     question.appendChild(answer);
-
-                    // Log each movie's title
-                    //console.log(clue);
-                    console.log(offset)
                 }
             });
             
             var emptyMessage = document.getElementById("empty");
             
+            // Displays a special message if no clues are returned
             if (count == 0) {
                 emptyMessage.style.display = "block";
                 nextButtons[0].style.display = nextButtons[1].style.display = "none";
@@ -127,28 +179,33 @@
             else
                 emptyMessage.style.display = "none";
 
+            // Only displays the next page button if the number of clues returned exceeds the limit of 100
             if (count >= 100)
                 nextButtons[0].style.display = nextButtons[1].style.display = "block";
         }
         
-        // Send request
+        // Sends the API request
         request.send();
     }
         
+    // Goes to the previous page of results by reducing the offset and making another request
     function previousPage() {
         offset -= 100;
         search();
 
+        // Hides the previous button if at the first page
         if (offset <= 0) {
             var prevButtons = document.getElementsByClassName("prev");
             prevButtons[0].style.display = prevButtons[1].style.display = "none";
         }
     }
         
+    // Goes to the next page of results by increasing the offset and making another request
     function nextPage() {
         offset += 100;
         search();
 
+        // Shows the previous button
         var prevButtons = document.getElementsByClassName("prev");
         prevButtons[0].style.display = prevButtons[1].style.display = "block";
     }
@@ -156,6 +213,7 @@
     window.onload = function() {
         offset = 0;
         
+        // Event triggered when the search selection is changed
         document.getElementById("dropdown").onchange = function() {
             var selection = document.getElementById("dropdown").value;
             var startDate = document.getElementById("startdate");
@@ -163,16 +221,17 @@
             var searchBar = document.getElementById("searchbar");
             var table = document.getElementById("cluesTable");
             
+            // Displays the search bar for filtering by category or question difficulty
             if (selection === "category" || selection === "difficulty") {
                 searchBar.style.display = "block";
                 startDate.style.display = "none";
                 endDate.style.display = "none";
             }
             
+            // Displays date input fields for filtering by date or timeframe    
             else {
                 searchBar.style.display = "none";
-                
-                
+                    
                 if (selection === "date") {
                     startDate.style.display = "block";
                     endDate.style.display = "none";
@@ -189,6 +248,7 @@
                 }
             }
             
+            // Hides the next and previous buttons and clears the table
             prevButtons[0].style.display = prevButtons[1].style.display = "none";
             nextButtons[0].style.display = nextButtons[1].style.display = "none";
             offset = 0;
@@ -196,15 +256,17 @@
         }        
         
         
-        
+        // Sets the functionality of the next and previous buttons
         document.getElementsByClassName("prev")[0].onclick = document.getElementsByClassName("prev")[1].onclick = previousPage;
         document.getElementsByClassName("next")[0].onclick = document.getElementsByClassName("next")[1].onclick = nextPage;
         
+        // Sets the search functionality to be triggered when the search button is clicked
         document.getElementById("search").onclick = () => {
             offset = 0; 
             search();
         }
         
+        // Hides the next and previous buttons and clears the table when any search parameters are changed
         document.getElementById("searchbar").onchange = document.getElementById("startdate").onchange = document.getElementById("enddate").onchange = () => {
             prevButtons[0].style.display = prevButtons[1].style.display = "none";
             nextButtons[0].style.display = nextButtons[1].style.display = "none";
@@ -218,6 +280,7 @@
 
 <body>
 <div class="topnav">
+    <h1>Jeopardy! Trivia Search</h1>
     
     <p>Search By: </p>
     <select id="dropdown">
@@ -233,6 +296,8 @@
     <input id="startdate" type="date" style="display:none;" />
     <input id="enddate" type="date" style="display:none;" />
     
+    <br/>
+    
     <button type="button" id="search">Enter</button>
     
     <br/>
@@ -243,7 +308,7 @@
     <br/>
     <table id="cluesTable"></table>
     
-    <p id="empty" style="display:none;">No results found</p>
+    <p id="empty" style="display:none;">No results found.</p>
     
     <br/>
     
